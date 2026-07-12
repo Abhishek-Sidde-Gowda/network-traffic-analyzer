@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+exports/uploads/
+ml/saved_models/
+*.egg-info/
+dist/
+build/
+.env
