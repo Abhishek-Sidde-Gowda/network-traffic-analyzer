@@ -85,6 +85,31 @@ def create_app() -> Flask:
             talker_map[ip] = talker_map.get(ip, 0) + r.get("total_bytes", 0)
         top_talkers = sorted(talker_map.items(), key=lambda x: x[1], reverse=True)[:10]
 
+        # Top destination ports by flow count
+        port_map: dict = {}
+        for r in result.flow_records:
+            port = r.get("dst_port", 0)
+            port_map[port] = port_map.get(port, 0) + 1
+        top_ports = sorted(port_map.items(), key=lambda x: x[1], reverse=True)[:15]
+
+        # Traffic timeline — flows bucketed by minute
+        from datetime import datetime
+        timeline_map: dict = {}
+        for r in result.flow_records:
+            ts = r.get("start_time", 0)
+            if ts:
+                bucket = datetime.fromtimestamp(ts).strftime("%H:%M")
+                timeline_map[bucket] = timeline_map.get(bucket, 0) + 1
+        timeline = [{"time": k, "flows": v} for k, v in sorted(timeline_map.items())]
+
+        # Risk scoring
+        from detection.risk_scorer import score_all
+        scored_flows = score_all(result.flow_records, result.alerts)
+        risk_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        for r in scored_flows:
+            lvl = r.get("risk_level", "LOW")
+            risk_counts[lvl] = risk_counts.get(lvl, 0) + 1
+
         return jsonify({
             "summary": {
                 "source": Path(result.source).name,
@@ -98,6 +123,9 @@ def create_app() -> Flask:
             "top_anomalous_flows": top_anomalous,
             "protocol_distribution": proto_counts,
             "top_talkers": [{"ip": ip, "bytes": b} for ip, b in top_talkers],
+            "top_ports": [{"port": p, "flows": c} for p, c in top_ports],
+            "timeline": timeline,
+            "risk_counts": risk_counts,
         })
 
     @app.route("/api/export/csv", methods=["POST"])

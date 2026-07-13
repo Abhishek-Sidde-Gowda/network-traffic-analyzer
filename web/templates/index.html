@@ -309,6 +309,26 @@ function renderDashboard(data) {
       <div id="score-chart" style="height:200px;"></div>
     </div>
 
+    <!-- Extra charts row -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <h4>Top Destination Ports</h4>
+        <div id="ports-chart" style="height:200px;"></div>
+      </div>
+      <div class="chart-card">
+        <h4>Traffic Timeline (flows/min)</h4>
+        <div id="timeline-chart" style="height:200px;"></div>
+      </div>
+    </div>
+
+    <!-- Risk level summary -->
+    <div class="kpi-row">
+      <div class="kpi danger"><div class="kpi-label">Critical Risk</div><div class="kpi-value" style="color:var(--danger)">${data.risk_counts?.CRITICAL||0}</div><div class="kpi-sub">flows</div></div>
+      <div class="kpi warning"><div class="kpi-label">High Risk</div><div class="kpi-value" style="color:var(--warning)">${data.risk_counts?.HIGH||0}</div><div class="kpi-sub">flows</div></div>
+      <div class="kpi"><div class="kpi-label">Medium Risk</div><div class="kpi-value" style="color:#3b82f6">${data.risk_counts?.MEDIUM||0}</div><div class="kpi-sub">flows</div></div>
+      <div class="kpi success"><div class="kpi-label">Low Risk</div><div class="kpi-value" style="color:var(--success)">${data.risk_counts?.LOW||0}</div><div class="kpi-sub">flows</div></div>
+    </div>
+
     <!-- Alerts -->
     ${data.alerts.length ? `
     <div class="alerts-section">
@@ -393,6 +413,36 @@ function renderDashboard(data) {
     margin: {t:5,b:30,l:90,r:50},
     xaxis: { color: fontCol, gridcolor: gridCol, title: 'MB', titlefont:{size:10} },
     yaxis: { color: fontCol, automargin: true, tickfont:{size:9} },
+  }, { responsive: true, displayModeBar: false });
+
+  // Top ports bar
+  const tp2 = data.top_ports || [];
+  Plotly.newPlot('ports-chart', [{
+    type: 'bar',
+    x: tp2.map(p => `${p.port}`),
+    y: tp2.map(p => p.flows),
+    marker: { color: '#00d4ff', opacity: 0.8 },
+  }], {
+    paper_bgcolor: plotBg, plot_bgcolor: plotBg,
+    margin: {t:5,b:40,l:40,r:10},
+    xaxis: { color: fontCol, gridcolor: gridCol, title: 'Port', tickfont:{size:9} },
+    yaxis: { color: fontCol, gridcolor: gridCol, title: 'Flows' },
+  }, { responsive: true, displayModeBar: false });
+
+  // Traffic timeline
+  const tl = data.timeline || [];
+  Plotly.newPlot('timeline-chart', [{
+    type: 'scatter', mode: 'lines+markers',
+    x: tl.map(t => t.time),
+    y: tl.map(t => t.flows),
+    line: { color: '#7c3aed', width: 2 },
+    marker: { color: '#7c3aed', size: 4 },
+    fill: 'tozeroy', fillcolor: 'rgba(124,58,237,0.1)',
+  }], {
+    paper_bgcolor: plotBg, plot_bgcolor: plotBg,
+    margin: {t:5,b:40,l:40,r:10},
+    xaxis: { color: fontCol, gridcolor: gridCol, title: 'Time', tickfont:{size:9} },
+    yaxis: { color: fontCol, gridcolor: gridCol, title: 'Flows' },
   }, { responsive: true, displayModeBar: false });
 
   // Score distribution histogram
